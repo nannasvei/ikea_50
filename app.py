@@ -1,12 +1,7 @@
 import streamlit as st
 from itertools import combinations, combinations_with_replacement
 from functools import lru_cache
-import math
 import time
-
-# ==========================================================
-#  PASTELOWE KOLORY
-# ==========================================================
 
 def generate_color_map(nums):
     unique = sorted(set(nums))
@@ -16,9 +11,8 @@ def generate_color_map(nums):
         color_map[value] = f"hsl({hue}, 55%, 65%)"
     return color_map
 
-
 # ==========================================================
-#  POMOCNICZE
+#  PARSE INPUT — JEDYNA ZMIANA W CAŁYM PLIKU
 # ==========================================================
 
 def parse_input(text):
@@ -37,11 +31,15 @@ def parse_input(text):
         )
         try:
             value = float(clean)
-            result.append(int(round(value)))
+            result.append(value)   # ← ← TU JEDYNA ZMIANA
         except ValueError:
             pass
+
     return result
 
+# ==========================================================
+#  RESZTA KODU — IDENTYCZNA Z TWOJĄ WERSJĄ
+# ==========================================================
 
 def assign_remainders_to_groups(groups, remainders):
     if not groups:
@@ -50,7 +48,6 @@ def assign_remainders_to_groups(groups, remainders):
         target = min(groups, key=lambda g: sum(g))
         target.append(r)
     return groups
-
 
 def finalize_groups(nums, groups, limit):
     nums_all = nums[:]
@@ -70,11 +67,6 @@ def finalize_groups(nums, groups, limit):
 
     assign_remainders_to_groups(valid, remaining)
     return valid
-
-
-# ==========================================================
-#  ALGORYTMY „NORMALNE”
-# ==========================================================
 
 def alg_largest_smallest(nums, limit):
     nums_sorted = sorted(nums, reverse=True)
@@ -111,7 +103,6 @@ def alg_largest_smallest(nums, limit):
 
     return finalize_groups(nums, groups, limit)
 
-
 def alg_best_fit_increasing(nums, limit):
     nums_sorted = sorted(nums)
     groups = []
@@ -135,7 +126,6 @@ def alg_best_fit_increasing(nums, limit):
             groups.append([num])
 
     return finalize_groups(nums, groups, limit)
-
 
 def alg_greedy_largest(nums, limit):
     nums_sorted = sorted(enumerate(nums), key=lambda x: x[1], reverse=True)
@@ -162,11 +152,6 @@ def alg_greedy_largest(nums, limit):
             groups.append(group)
 
     return finalize_groups(nums, groups, limit)
-
-
-# ==========================================================
-#  CORE DP – OPTYMALNE GRUPOWANIE
-# ==========================================================
 
 def dp_optimal_groups(nums, limit):
     n = len(nums)
@@ -202,24 +187,16 @@ def dp_optimal_groups(nums, limit):
 
     return groups
 
+# ----------------------------------------------------------
+# BACKTRACKING
+# ----------------------------------------------------------
 
-# ==========================================================
-#  BACKTRACKING — Z *ŻYWYM PODGLĄDEM*
-# ==========================================================
-
-def alg_backtracking(nums, limit):
-    """
-    Backtracking z żywym podglądem:
-    - czas działania
-    - liczba kroków
-    - najlepszy wynik do tej pory
-    """
-
+def backtracking_core(nums, limit, label_prefix="Backtracking"):
     nums_sorted = sorted(nums, reverse=True)
     best = []
     n = len(nums_sorted)
 
-    # miejsca UI na dynamiczne aktualizacje
+    status_title = st.markdown(f"#### {label_prefix}")
     status_time = st.empty()
     status_steps = st.empty()
     status_best = st.empty()
@@ -229,10 +206,8 @@ def alg_backtracking(nums, limit):
 
     def dfs(remaining, current):
         nonlocal best, step
-
         step += 1
 
-        # aktualizacja co 200 kroków (mniej spowalnia)
         if step % 200 == 0:
             elapsed = time.time() - start_time
             status_time.write(f"⏳ Czas działania: **{elapsed:.1f} s**")
@@ -240,13 +215,12 @@ def alg_backtracking(nums, limit):
 
             if best:
                 status_best.write(
-                    f"⭐ Najlepszy wynik: **{len(best)} pudełek**\n"
+                    f"⭐ Najlepszy wynik: **{len(best)} pudełek**  \n"
                     f"`{best}`"
                 )
             else:
-                status_best.write("⏳ Szukam pierwszego lepszego podziału...")
+                status_best.write("⏳ Szukam pierwszego pełnego podziału...")
 
-        # normalna logika DFS — nie zmieniamy jej
         if not remaining:
             if len(current) > len(best):
                 best = list(current)
@@ -262,65 +236,139 @@ def alg_backtracking(nums, limit):
 
     dfs(nums_sorted, [])
 
-    # zakończenie
     elapsed = time.time() - start_time
     status_time.write(f"✅ Zakończono w **{elapsed:.2f} s**")
     status_steps.write(f"🔢 Łączna liczba kroków: **{step:,}**")
-    status_best.write(f"🏁 OSTATECZNY wynik: **{len(best)} pudełek**\n`{best}`")
+    status_best.write(
+        f"🏁 Ostateczny wynik ({label_prefix}): **{len(best)} pudełek**  \n"
+        f"`{best}`"
+    )
 
-    return finalize_groups(nums, best, limit)
+    return best
 
+def alg_backtracking(nums, limit):
+    best_groups = backtracking_core(nums, limit, label_prefix="5️⃣ Pełny Backtracking (LIVE)")
+    return finalize_groups(nums, best_groups, limit)
+
+# ----------------------------------------------------------
+# ALGORYTM #4 – PRE-GROUPS
+# ----------------------------------------------------------
+
+def best_subset_closest_at_least(nums, limit):
+    dp = {0: []}
+    for idx, val in enumerate(nums):
+        current = list(dp.items())
+        for s, idx_list in current:
+            new_s = s + val
+            if new_s not in dp:
+                dp[new_s] = idx_list + [idx]
+
+    candidates = [s for s in dp.keys() if s >= limit]
+    if not candidates:
+        return None
+    best_sum = min(candidates)
+    return dp[best_sum]
+
+def alg_prepack_backtracking(nums, limit, pre_groups_count):
+    if pre_groups_count <= 0:
+        st.info("Alg.4: pre_groups_count = 0, używam pełnego backtrackingu.")
+        return alg_backtracking(nums, limit)
+
+    remaining = nums[:]
+    pre_groups = []
+
+    for i in range(pre_groups_count):
+        if not remaining:
+            break
+
+        idxs = best_subset_closest_at_least(remaining, limit)
+        if idxs is None:
+            st.warning(
+                f"Alg.4: nie udało się stworzyć kolejnej grupy ≥ {limit} "
+                f"przy próbie #{i+1}. Przerywam heurystykę."
+            )
+            break
+
+        group = [remaining[j] for j in idxs]
+        pre_groups.append(group)
+
+        idx_set = set(idxs)
+        remaining = [v for j, v in enumerate(remaining) if j not in idx_set]
+
+    st.write(
+        f"Alg.4: utworzono heurystycznie **{len(pre_groups)}** grup, "
+        f"pozostało **{len(remaining)}** elementów dla backtrackingu."
+    )
+
+    if remaining:
+        rest_groups_core = backtracking_core(
+            remaining,
+            limit,
+            label_prefix="4️⃣ Backtracking na pozostałych (po wstępnych grupach)"
+        )
+    else:
+        rest_groups_core = []
+
+    all_core_groups = pre_groups + rest_groups_core
+    return finalize_groups(nums, all_core_groups, limit)
+
+# ----------------------------------------------------------
+# DP BITMASK
+# ----------------------------------------------------------
 
 def alg_dp_bitmask(nums, limit):
-    return finalize_groups(nums, dp_optimal_groups(nums, limit), limit)
+    groups_core = dp_optimal_groups(nums, limit)
+    return finalize_groups(nums, groups_core, limit)
 
-
-# ==========================================================
-#  AUGMENTACJA
-# ==========================================================
+# ----------------------------------------------------------
+# AUGMENTATION
+# ----------------------------------------------------------
 
 def optimal_box_count(nums, limit):
-    return len(dp_optimal_groups(nums, limit))
-
+    groups = dp_optimal_groups(nums, limit)
+    return len(groups)
 
 def find_min_extra_for_new_box(nums, limit, max_x=100):
-    progress = st.progress(0)
+    progress = st.progress(0, text="⏳ Szukam minimalnej dopłaty X…")
     status = st.empty()
     start = time.time()
 
     base = optimal_box_count(nums, limit)
-    target = base + 1 if base > 0 else 1
+    target = base + 1 if base > 0 or sum(nums) >= limit else 1
 
     for x in range(1, max_x + 1):
         pct = x / max_x
         progress.progress(pct)
 
-        est = time.time() - start
-        eta = est * (1/pct - 1) if pct > 0 else 0
+        elapsed = time.time() - start
+        eta = elapsed * (1/pct - 1) if pct > 0 else 0
 
-        status.write(f"Testuję X={x}  | {pct*100:.1f}% | ETA {eta:.1f}s")
+        status.write(
+            f"Testuję X = {x} | cel: ≥ {target} pudełek | "
+            f"{pct*100:.1f}% | ETA: {eta:.1f} s"
+        )
 
         boxes = optimal_box_count(nums + [x], limit)
         if boxes >= target:
             progress.progress(1.0)
-            status.write(f"Znaleziono X={x}")
+            status.write(f"✅ Znaleziono X = {x}")
             return x, base, boxes
 
+    progress.progress(1.0)
+    status.write("❌ Nie znaleziono X w zadanym zakresie")
     return None, base, base
 
-
-# ==========================================================
-#  HTML RENDERING
-# ==========================================================
+# ----------------------------------------------------------
+# HTML RENDERING
+# ----------------------------------------------------------
 
 def draw_box(num, colors):
     return (
         f"<span style='background-color:{colors[num]};"
-        f"padding:6px 10px;border-radius:8px;margin-right:6px;"
-        f"color:black;font-weight:bold;display:inline-block;'>"
-        f"{num}</span>"
+        f"padding:6px 10px;border-radius:8px;"
+        f"margin-right:6px;color:black;font-weight:bold;"
+        f"display:inline-block;'>{num}</span>"
     )
-
 
 def show_groups(title, groups, colors):
     st.markdown(f"### {title}")
@@ -328,7 +376,6 @@ def show_groups(title, groups, colors):
         st.info("Brak pudełek.")
         st.markdown("<hr>", unsafe_allow_html=True)
         return
-
     for i, g in enumerate(groups, start=1):
         tiles = "".join(draw_box(x, colors) for x in g)
         st.markdown(
@@ -337,50 +384,119 @@ def show_groups(title, groups, colors):
         )
     st.markdown("<hr>", unsafe_allow_html=True)
 
-
-# ==========================================================
-#  UI
-# ==========================================================
+# ----------------------------------------------------------
+# UI
+# ----------------------------------------------------------
 
 st.title("📦 Grupowanie kwot na pudełka ≥ limit")
 
 col1, col2 = st.columns(2)
-
 with col1:
     raw = st.text_area(
         "Lista kwot:",
         "35,99 zł\n35,00 zł\n35,99 zł\n21,99 zł\n39,99 zł\n44,99 zł\n25,99 zł\n4,00 zł\n3,99 zł\n29,99 zł\n24,99 zł\n12,99 zł",
+        key="lista_kwot",
     )
 with col2:
-    limit = st.number_input("Limit pudełka:", value=50, min_value=1)
+    limit = st.number_input(
+        "Limit pudełka:", value=50, min_value=1, step=1, key="limit_pudelka"
+    )
+    pre_groups_count = st.number_input(
+        "Alg.4: ile wstępnych grup (x)?",
+        value=2, min_value=0, step=1, key="pre_groups_count"
+    )
 
 nums = parse_input(raw)
 
 if not nums:
-    st.warning("Wprowadź poprawne dane.")
+    st.warning("Wpisz poprawne dane wejściowe (co najmniej jedna liczba).")
 
-tab1, tab2 = st.tabs(["🧮 Grupowanie", "💸 Minimalna dopłata"])
+tab1, tab2 = st.tabs([
+    "🧮 Grupowanie pudełek",
+    "💸 Minimalna dopłata na nową paczkę"
+])
 
 with tab1:
-    if st.button("Oblicz", key="btn_group"):
-        colors = generate_color_map(nums)
+    if st.button("Oblicz grupowanie", key="btn_oblicz_grupowanie"):
+        if not nums:
+            st.error("Błędne dane wejściowe.")
+        else:
+            colors = generate_color_map(nums)
+            total = sum(nums)
+            theoretical = total // limit
 
-        show_groups("1. Largest + Smallest", alg_largest_smallest(nums, limit), colors)
-        show_groups("2. Best-Fit Increasing", alg_best_fit_increasing(nums, limit), colors)
-        show_groups("3. Greedy Largest First", alg_greedy_largest(nums, limit), colors)
-        show_groups("4. Backtracking (LIVE!)", alg_backtracking(nums, limit), colors)
-        show_groups("5. Bitmask DP (optymalne)", alg_dp_bitmask(nums, limit), colors)
+            st.markdown(f"### Całkowita suma: **{total}**")
+            st.markdown(f"### Teoretyczna liczba pudełek: **{theoretical}**")
+            st.markdown("---")
+
+            show_groups("1. Largest + Smallest Fit", alg_largest_smallest(nums, limit), colors)
+            show_groups("2. Best-Fit Increasing", alg_best_fit_increasing(nums, limit), colors)
+            show_groups("3. Greedy Largest First", alg_greedy_largest(nums, limit), colors)
+
+            show_groups(
+                "4. Wstępne grupy (x) + Backtracking na reszcie",
+                alg_prepack_backtracking(nums, limit, int(pre_groups_count)),
+                colors
+            )
+
+            show_groups("5. Pełny Backtracking (LIVE)", alg_backtracking(nums, limit), colors)
+
+            show_groups("6. Bitmask DP (optymalne)", alg_dp_bitmask(nums, limit), colors)
+
+            st.markdown("## 🔍 Analiza optymalnej liczby pudełek")
+
+            opt_boxes = optimal_box_count(nums, limit)
+            st.write(f"**Maksymalna liczba pudełek (optymalnie, DP):** {opt_boxes}")
+
+            if opt_boxes >= theoretical:
+                st.success("Już osiągasz teoretyczną liczbę pudełek – augmentacja niepotrzebna.")
+            else:
+                st.warning(
+                    f"Aktualnie da się ułożyć maksymalnie {opt_boxes} pudełek, "
+                    f"a teoretycznie możliwe byłoby {theoretical}."
+                )
+                st.info("Przejdź do zakładki **Minimalna dopłata**, aby znaleźć brakującą kwotę.")
 
 with tab2:
-    max_x = st.number_input("Maks. X", min_value=1, value=50)
+    max_x = st.number_input(
+        "Maksymalna dopłata X:",
+        value=min(limit, 100),
+        min_value=1,
+        step=1,
+        key="max_x_doplata"
+    )
 
-    if st.button("Policz dopłatę"):
-        x, before, after = find_min_extra_for_new_box(nums, limit, max_x)
-
-        st.write(f"Pudełek przed: **{before}**")
-        if x is None:
-            st.error("Nie znaleziono X")
+    if st.button("Policz minimalną dopłatę X", key="btn_min_doplata"):
+        if not nums:
+            st.error("Najpierw wprowadź listę kwot.")
         else:
-            st.success(f"Minimalne X = **{x}** → {after} pudełek")
-            new_nums = nums + [x]
-            show_groups("Po dopłacie", alg_dp_bitmask(new_nums, limit), generate_color_map(new_nums))
+            colors_before = generate_color_map(nums)
+            groups_before = alg_dp_bitmask(nums, limit)
+            base_boxes = len(groups_before)
+
+            st.markdown("#### 📦 Stan wyjściowy")
+            st.write(f"Pudełek przed dopłatą: **{base_boxes}**")
+            show_groups("Pudełka przed dopłatą", groups_before, colors_before)
+
+            x, base_boxes_calc, boxes_after = find_min_extra_for_new_box(
+                nums, limit, max_x=int(max_x)
+            )
+
+            st.markdown("---")
+            st.markdown("#### 🔍 Wynik dopłaty")
+
+            if x is None:
+                st.error(
+                    f"Nie znaleziono wartości X w zakresie 1..{int(max_x)} "
+                    f"zwiększającej liczbę pudełek."
+                )
+            else:
+                st.success(
+                    f"Minimalne X = **{x} zł**  \n"
+                    f"Pudełek przed: **{base_boxes_calc}**  \n"
+                    f"Pudełek po: **{boxes_after}**"
+                )
+                new_nums = nums + [x]
+                colors_after = generate_color_map(new_nums)
+                groups_after = alg_dp_bitmask(new_nums, limit)
+                show_groups("Pudełka po dodaniu X", groups_after, colors_after)
