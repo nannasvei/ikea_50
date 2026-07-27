@@ -1,0 +1,7 @@
+node_modules/
+.pnpm-store/
+.next/
+dist/
+.wrangler/
+*.log
+.env*
