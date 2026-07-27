@@ -2,6 +2,7 @@ node_modules/
 .pnpm-store/
 .next/
 dist/
+pages-dist/
 .wrangler/
 *.log
 .env*
