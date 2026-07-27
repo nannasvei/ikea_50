@@ -35,6 +35,8 @@ jobs:
 
       - name: Przygotuj GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Przekaż gotową stronę
         uses: actions/upload-pages-artifact@v3
