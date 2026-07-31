@@ -102,12 +102,6 @@ h2 { font: 700 28px "Manrope"; letter-spacing: -1.3px; margin: 0; }
 .stats span { display: block; color: rgba(255,255,255,.58); font-size: 9px; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px; }
 .stats strong { font: 700 18px "Manrope"; }
 .package-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
-.remainder-card { margin-top: 14px; padding: 18px 20px; border: 1px dashed #b8b5a9; border-radius: 12px; background: #f4f1e8; }
-.remainder-card > div:first-child { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
-.remainder-card > div:first-child span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .8px; }
-.remainder-card > div:first-child strong { font: 700 18px "Manrope"; }
-.remainder-card p { color: var(--muted); font-size: 11px; margin: 0 0 12px; }
-.remainder-card small { display: block; color: var(--muted); margin-top: 10px; }
 .package-card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: #fff; }
 .package-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
 .package-head strong { font: 700 16px "Manrope"; }

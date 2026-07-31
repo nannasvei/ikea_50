@@ -1,21 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { optimalGroups, parseAmounts, remainingValues, sum, tightGroups } from "../app/optimizer.ts";
+import { optimalGroups, parseAmounts, sum, tightGroups } from "../app/optimizer.ts";
 
 test("parses Polish currency without losing grosze", () => {
   assert.deepEqual(parseAmounts("150,25 zł\n49.99 PLN").values, [15025, 4999]);
 });
 
 test("tight strategy chooses the closest available sum above the limit", () => {
-  const groups = tightGroups([12900, 1199, 3799, 1999, 2000], 15000);
+  const groups = tightGroups([12900, 1199, 3799, 1999, 2000, 20000], 15000);
   assert.equal(sum(groups[0]), 16098);
 });
 
-test("tight strategy does not add an incomplete remainder to a finished package", () => {
-  const values = [24500, 1000, 2000];
+test("tight strategy adds the incomplete remainder only to the last package", () => {
+  const values = [10000, 5000, 9000, 6000, 1000];
   const groups = tightGroups(values, 15000);
-  assert.deepEqual(groups, [[24500]]);
-  assert.deepEqual(remainingValues(values, groups), [1000, 2000]);
+  assert.deepEqual(groups.map(sum), [15000, 16000]);
+  assert.deepEqual(groups.flat().sort((a, b) => a - b), values.slice().sort((a, b) => a - b));
 });
 
 test("optimal strategy still assigns the remainder when valid packages exist", () => {

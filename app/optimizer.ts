@@ -95,20 +95,20 @@ function tightSeedGroups(values: number[], limit: number): Group[] {
     groups.push(remaining.filter((_, index) => selected.has(index)));
     remaining = remaining.filter((_, index) => !selected.has(index));
   }
-  return groups.sort((a, b) => sum(a) - sum(b));
+  return groups;
 }
 
 export function tightGroups(values: number[], limit: number): Group[] {
-  return tightSeedGroups(values, limit);
-}
+  const groups = tightSeedGroups(values, limit);
+  if (!groups.length) return groups;
 
-export function remainingValues(values: number[], groups: Group[]): number[] {
   const remaining = values.slice();
   for (const value of groups.flat()) {
     const index = remaining.indexOf(value);
     if (index >= 0) remaining.splice(index, 1);
   }
-  return remaining;
+  groups[groups.length - 1].push(...remaining);
+  return groups;
 }
 
 export function optimalGroups(values: number[], limit: number): Group[] {
