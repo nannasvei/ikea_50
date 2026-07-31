@@ -99,16 +99,16 @@ function tightSeedGroups(values: number[], limit: number): Group[] {
 }
 
 export function tightGroups(values: number[], limit: number): Group[] {
-  const groups = tightSeedGroups(values, limit);
-  if (!groups.length) return groups;
-
-  const remaining = values.slice();
+  const oversized = values.filter(value => value >= limit).map(value => [value]);
+  const smaller = values.filter(value => value < limit);
+  const groups = tightSeedGroups(smaller, limit);
+  const remaining = smaller.slice();
   for (const value of groups.flat()) {
     const index = remaining.indexOf(value);
     if (index >= 0) remaining.splice(index, 1);
   }
-  groups[groups.length - 1].push(...remaining);
-  return groups;
+  const incomplete = remaining.length ? [remaining] : [];
+  return [...incomplete, ...groups, ...oversized];
 }
 
 export function optimalGroups(values: number[], limit: number): Group[] {

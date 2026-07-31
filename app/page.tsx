@@ -21,10 +21,11 @@ const formatMoney = (cents: number) => money.format(cents / 100);
 
 function PackageCard({ group, index, limit }: { group: Group; index: number; limit: number }) {
   const total = sum(group);
+  const incomplete = total < limit;
   return (
-    <article className="package-card">
+    <article className={`package-card${incomplete ? " incomplete" : ""}`}>
       <div className="package-head">
-        <span className="package-number">Paczka {String(index + 1).padStart(2, "0")}</span>
+        <span className="package-number">Paczka {String(index + 1).padStart(2, "0")}{incomplete && <b>Niepełna</b>}</span>
         <strong>{formatMoney(total)}</strong>
       </div>
       <div className="amount-pills">
@@ -33,7 +34,7 @@ function PackageCard({ group, index, limit }: { group: Group; index: number; lim
         ))}
       </div>
       <div className="meter"><span style={{ width: `${Math.min(100, (total / limit) * 100)}%` }} /></div>
-      <small>{total >= limit ? `${formatMoney(total - limit)} ponad limit` : `${formatMoney(limit - total)} do limitu`}</small>
+      <small>{total >= limit ? `${formatMoney(total - limit)} ponad limit` : `${formatMoney(limit - total)} brakuje, aby paczka była pełna`}</small>
     </article>
   );
 }
@@ -65,6 +66,7 @@ export default function Home() {
     return optimalGroups(parsed.values, limit);
   }, [calculated, parsed.values, limit, strategy]);
   const groupedTotal = useMemo(() => sum(groups.flat()), [groups]);
+  const completeGroupCount = useMemo(() => groups.filter(group => sum(group) >= limit).length, [groups, limit]);
   const maxExtra = Math.max(1, Math.round(Number(maxExtraText.replace(",", ".")) * 100) || 10000);
   const extra = useMemo(
     () => activeTab === "extra" && calculated && parsed.values.length
@@ -171,7 +173,7 @@ export default function Home() {
               <p className="eyebrow">WYNIK</p>
               <h2>{activeTab === "groups" ? "Gotowy podział" : "Brakująca kwota"}</h2>
             </div>
-            {activeTab === "groups" && <span className="result-count">{groups.length} {groups.length === 1 ? "paczka" : groups.length < 5 ? "paczki" : "paczek"}</span>}
+            {activeTab === "groups" && <span className="result-count">{completeGroupCount} {completeGroupCount === 1 ? "pełna paczka" : completeGroupCount < 5 ? "pełne paczki" : "pełnych paczek"}</span>}
           </div>
 
           {!calculated ? (
@@ -180,7 +182,7 @@ export default function Home() {
             <>
               <div className="stats">
                 <div><span>Wartość</span><strong>{formatMoney(total)}</strong></div>
-                <div><span>Wykorzystany potencjał</span><strong>{theoretical ? Math.round((groups.length / theoretical) * 100) : 0}%</strong></div>
+                <div><span>Wykorzystany potencjał</span><strong>{theoretical ? Math.round((completeGroupCount / theoretical) * 100) : 0}%</strong></div>
                 <div><span>Średnio w paczce</span><strong>{groups.length ? formatMoney(groupedTotal / groups.length) : "—"}</strong></div>
                 <div><span>Minimalna dopłata</span><strong>{minimumExtraSummary !== null ? `+ ${formatMoney(minimumExtraSummary)}` : "—"}</strong></div>
               </div>

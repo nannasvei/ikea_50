@@ -8,13 +8,14 @@ test("parses Polish currency without losing grosze", () => {
 
 test("tight strategy chooses the closest available sum above the limit", () => {
   const groups = tightGroups([12900, 1199, 3799, 1999, 2000, 20000], 15000);
-  assert.equal(sum(groups[0]), 16098);
+  assert.deepEqual(groups.map(sum), [5799, 16098, 20000]);
 });
 
-test("tight strategy adds the incomplete remainder only to the last package", () => {
-  const values = [10000, 5000, 9000, 6000, 1000];
+test("tight strategy orders incomplete, tight, and oversized packages", () => {
+  const values = [17000, 15000, 9000, 6000, 8000, 5000, 1000];
   const groups = tightGroups(values, 15000);
-  assert.deepEqual(groups.map(sum), [15000, 16000]);
+  assert.deepEqual(groups.map(sum), [14000, 15000, 17000, 15000]);
+  assert.deepEqual(groups.slice(-2), [[17000], [15000]]);
   assert.deepEqual(groups.flat().sort((a, b) => a - b), values.slice().sort((a, b) => a - b));
 });
 
