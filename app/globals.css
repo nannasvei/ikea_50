@@ -72,10 +72,14 @@ textarea:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px 
 .input-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; margin-top: 7px; }
 .warning, .notice { color: #8a5c00; background: #fff4d4; border-radius: 8px; padding: 9px 11px; font-size: 11px; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 22px; }
-.field-row > label:only-child { grid-column: 1 / -1; }
+.field-row > :only-child { grid-column: 1 / -1; }
 .money-input { margin-top: 8px; display: flex; border: 1px solid var(--line); background: white; border-radius: 10px; overflow: hidden; }
 .money-input input { width: 100%; border: 0; outline: 0; padding: 11px 12px; color: var(--ink); background: transparent; font-weight: 600; min-width: 0; }
 .money-input span { color: var(--muted); font-size: 10px; padding: 13px 10px 0; }
+.limit-presets { display: flex; gap: 6px; margin-top: 8px; }
+.limit-presets button { flex: 1; border: 1px solid var(--line); border-radius: 8px; background: white; padding: 7px 8px; color: var(--muted); cursor: pointer; font-size: 10px; font-weight: 700; }
+.limit-presets button:hover { border-color: #9bb0a8; color: var(--ink); }
+.limit-presets button.active { border-color: var(--green); background: #eef4ec; color: var(--green); }
 .strategies { display: grid; gap: 7px; }
 .strategies button { text-align: left; border: 1px solid var(--line); border-radius: 10px; background: white; padding: 11px 13px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
 .strategies button:hover { border-color: #9bb0a8; }
@@ -92,7 +96,7 @@ textarea:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px 
 .result-heading .eyebrow { margin-bottom: 8px; }
 h2 { font: 700 28px "Manrope"; letter-spacing: -1.3px; margin: 0; }
 .result-count { border: 1px solid #bfd1c6; color: var(--green); background: #f1f7ef; padding: 8px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; }
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--ink); color: white; border-radius: 12px; padding: 19px 7px; margin-bottom: 20px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--ink); color: white; border-radius: 12px; padding: 19px 7px; margin-bottom: 20px; }
 .stats div { padding: 0 18px; border-right: 1px solid rgba(255,255,255,.15); }
 .stats div:last-child { border: 0; }
 .stats span { display: block; color: rgba(255,255,255,.58); font-size: 9px; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px; }

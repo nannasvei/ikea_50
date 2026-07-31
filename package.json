@@ -10,6 +10,7 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "build:pages": "vite build --config vite.pages.config.ts",
+    "test:optimizer": "node --experimental-strip-types --test tests/optimizer.test.ts",
     "start": "vinext start"
   },
   "dependencies": {

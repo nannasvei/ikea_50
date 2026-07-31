@@ -48,14 +48,14 @@ function Results({ groups, limit }: { groups: Group[]; limit: number }) {
 
 export default function Home() {
   const [raw, setRaw] = useState(SAMPLE);
-  const [limitText, setLimitText] = useState("50,00");
+  const [limitText, setLimitText] = useState("150,00");
   const [activeTab, setActiveTab] = useState<"groups" | "extra">("groups");
   const [strategy, setStrategy] = useState<"optimal" | "tight" | "fast">("optimal");
   const [calculated, setCalculated] = useState(true);
   const [maxExtraText, setMaxExtraText] = useState("100,00");
 
   const parsed = useMemo(() => parseAmounts(raw), [raw]);
-  const limit = Math.max(1, Math.round(Number(limitText.replace(",", ".")) * 100) || 5000);
+  const limit = Math.max(1, Math.round(Number(limitText.replace(",", ".")) * 100) || 15000);
   const total = sum(parsed.values);
   const theoretical = Math.floor(total / limit);
   const groups = useMemo(() => {
@@ -72,6 +72,17 @@ export default function Home() {
     [activeTab, calculated, parsed.values, limit, maxExtra]
   );
   const groupsAfter = extra ? optimalGroups([...parsed.values, extra], limit) : [];
+  const minimumExtraSummary = useMemo(
+    () => calculated && parsed.values.length
+      ? findMinimumExtra(parsed.values, limit, limit)
+      : null,
+    [calculated, parsed.values, limit]
+  );
+
+  const setLimitPreset = (value: 150 | 50) => {
+    setLimitText(`${value},00`);
+    setCalculated(false);
+  };
 
   return (
     <main>
@@ -113,9 +124,22 @@ export default function Home() {
           {parsed.invalid > 0 && <p className="warning">Pominięto niepoprawne wiersze: {parsed.invalid}</p>}
 
           <div className="field-row">
-            <label>Limit paczki
-              <div className="money-input"><input value={limitText} onChange={e => { setLimitText(e.target.value); setCalculated(false); }} inputMode="decimal" /><span>PLN</span></div>
-            </label>
+            <div className="limit-field">
+              <label htmlFor="package-limit">Limit paczki</label>
+              <div className="money-input"><input id="package-limit" value={limitText} onChange={e => { setLimitText(e.target.value); setCalculated(false); }} inputMode="decimal" /><span>PLN</span></div>
+              <div className="limit-presets" aria-label="Szybki wybór limitu">
+                {[150, 50].map(value => (
+                  <button
+                    type="button"
+                    className={limit === value * 100 ? "active" : ""}
+                    onClick={() => setLimitPreset(value as 150 | 50)}
+                    key={value}
+                  >
+                    {value} PLN
+                  </button>
+                ))}
+              </div>
+            </div>
             {activeTab === "extra" && (
               <label>Maks. dopłata
                 <div className="money-input"><input value={maxExtraText} onChange={e => { setMaxExtraText(e.target.value); setCalculated(false); }} inputMode="decimal" /><span>PLN</span></div>
@@ -157,6 +181,7 @@ export default function Home() {
                 <div><span>Wartość</span><strong>{formatMoney(total)}</strong></div>
                 <div><span>Wykorzystany potencjał</span><strong>{theoretical ? Math.round((groups.length / theoretical) * 100) : 0}%</strong></div>
                 <div><span>Średnio w paczce</span><strong>{groups.length ? formatMoney(total / groups.length) : "—"}</strong></div>
+                <div><span>Minimalna dopłata</span><strong>{minimumExtraSummary !== null ? `+ ${formatMoney(minimumExtraSummary)}` : "—"}</strong></div>
               </div>
               {parsed.values.length > 18 && strategy === "optimal" && <p className="notice">Dla ponad 18 pozycji użyliśmy szybkiej, bezpiecznej strategii.</p>}
               <Results groups={groups} limit={limit} />
