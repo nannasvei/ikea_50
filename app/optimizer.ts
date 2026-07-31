@@ -24,7 +24,7 @@ export function parseAmounts(text: string): { values: number[]; invalid: number 
 }
 
 function finalize(values: number[], core: Group[]): Group[] {
-  if (!core.length) return values.length ? [values.slice()] : [];
+  if (!core.length) return [];
   const remaining = values.slice();
   for (const group of core) {
     for (const value of group) {
@@ -95,94 +95,26 @@ function tightSeedGroups(values: number[], limit: number): Group[] {
     groups.push(remaining.filter((_, index) => selected.has(index)));
     remaining = remaining.filter((_, index) => !selected.has(index));
   }
-  return finalize(values, groups);
-}
-
-function surplusScore(groups: Group[], limit: number) {
-  const surpluses = groups.map(group => sum(group) - limit);
-  return {
-    maximum: Math.max(0, ...surpluses),
-    squared: surpluses.reduce((total, surplus) => total + surplus * surplus, 0)
-  };
-}
-
-function isBetterScore(
-  candidate: ReturnType<typeof surplusScore>,
-  current: ReturnType<typeof surplusScore>
-) {
-  return candidate.maximum < current.maximum
-    || (candidate.maximum === current.maximum && candidate.squared < current.squared);
-}
-
-function balanceSurpluses(groups: Group[], limit: number): Group[] {
-  const balanced = groups.map(group => group.slice());
-  if (balanced.length < 2) return balanced;
-
-  for (let pass = 0; pass < 100; pass++) {
-    const currentScore = surplusScore(balanced, limit);
-    let improved = false;
-
-    for (let from = 0; from < balanced.length && !improved; from++) {
-      for (let item = 0; item < balanced[from].length && !improved; item++) {
-        const value = balanced[from][item];
-        if (sum(balanced[from]) - value < limit) continue;
-
-        for (let to = 0; to < balanced.length; to++) {
-          if (from === to) continue;
-          const candidate = balanced.map(group => group.slice());
-          candidate[from].splice(item, 1);
-          candidate[to].push(value);
-          if (isBetterScore(surplusScore(candidate, limit), currentScore)) {
-            balanced[from].splice(item, 1);
-            balanced[to].push(value);
-            improved = true;
-            break;
-          }
-        }
-      }
-    }
-
-    for (let left = 0; left < balanced.length && !improved; left++) {
-      for (let right = left + 1; right < balanced.length && !improved; right++) {
-        for (let a = 0; a < balanced[left].length && !improved; a++) {
-          for (let b = 0; b < balanced[right].length; b++) {
-            const leftValue = balanced[left][a];
-            const rightValue = balanced[right][b];
-            const leftTotal = sum(balanced[left]) - leftValue + rightValue;
-            const rightTotal = sum(balanced[right]) - rightValue + leftValue;
-            if (leftTotal < limit || rightTotal < limit) continue;
-
-            const candidate = balanced.map(group => group.slice());
-            candidate[left][a] = rightValue;
-            candidate[right][b] = leftValue;
-            if (isBetterScore(surplusScore(candidate, limit), currentScore)) {
-              balanced[left][a] = rightValue;
-              balanced[right][b] = leftValue;
-              improved = true;
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!improved) break;
-  }
-
-  return balanced.sort((a, b) => sum(a) - sum(b));
+  return groups.sort((a, b) => sum(a) - sum(b));
 }
 
 export function tightGroups(values: number[], limit: number): Group[] {
-  const seed = values.length <= 18
-    ? optimalGroups(values, limit)
-    : tightSeedGroups(values, limit);
-  return balanceSurpluses(seed, limit);
+  return tightSeedGroups(values, limit);
+}
+
+export function remainingValues(values: number[], groups: Group[]): number[] {
+  const remaining = values.slice();
+  for (const value of groups.flat()) {
+    const index = remaining.indexOf(value);
+    if (index >= 0) remaining.splice(index, 1);
+  }
+  return remaining;
 }
 
 export function optimalGroups(values: number[], limit: number): Group[] {
   const n = values.length;
   if (!n) return [];
-  if (n > 18) return tightGroups(values, limit);
+  if (n > 18) return finalize(values, tightSeedGroups(values, limit));
 
   const maxMask = 1 << n;
   const subsetSums = new Int32Array(maxMask);

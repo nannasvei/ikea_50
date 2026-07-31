@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { findMinimumExtra, greedyGroups, optimalGroups, parseAmounts, sum, tightGroups, type Group } from "./optimizer";
+import { findMinimumExtra, greedyGroups, optimalGroups, parseAmounts, remainingValues, sum, tightGroups, type Group } from "./optimizer";
 
 const SAMPLE = `35,99 zł
 35,00 zł
@@ -46,6 +46,24 @@ function Results({ groups, limit }: { groups: Group[]; limit: number }) {
   );
 }
 
+function Remainder({ values, limit }: { values: number[]; limit: number }) {
+  if (!values.length) return null;
+  const total = sum(values);
+  return (
+    <aside className="remainder-card">
+      <div>
+        <span>Pozostałe kwoty</span>
+        <strong>{formatMoney(total)}</strong>
+      </div>
+      <p>Nie tworzą pełnej paczki. Zostawiamy je osobno, aby nie zwiększać nadwyżek gotowych paczek.</p>
+      <div className="amount-pills">
+        {values.map((value, index) => <span className="amount-pill" key={`${value}-${index}`}>{formatMoney(value)}</span>)}
+      </div>
+      <small>{formatMoney(limit - total)} brakuje do kolejnej paczki</small>
+    </aside>
+  );
+}
+
 export default function Home() {
   const [raw, setRaw] = useState(SAMPLE);
   const [limitText, setLimitText] = useState("150,00");
@@ -64,6 +82,11 @@ export default function Home() {
     if (strategy === "tight") return tightGroups(parsed.values, limit);
     return optimalGroups(parsed.values, limit);
   }, [calculated, parsed.values, limit, strategy]);
+  const remainder = useMemo(
+    () => strategy === "tight" ? remainingValues(parsed.values, groups) : [],
+    [strategy, parsed.values, groups]
+  );
+  const groupedTotal = useMemo(() => sum(groups.flat()), [groups]);
   const maxExtra = Math.max(1, Math.round(Number(maxExtraText.replace(",", ".")) * 100) || 10000);
   const extra = useMemo(
     () => activeTab === "extra" && calculated && parsed.values.length
@@ -180,11 +203,12 @@ export default function Home() {
               <div className="stats">
                 <div><span>Wartość</span><strong>{formatMoney(total)}</strong></div>
                 <div><span>Wykorzystany potencjał</span><strong>{theoretical ? Math.round((groups.length / theoretical) * 100) : 0}%</strong></div>
-                <div><span>Średnio w paczce</span><strong>{groups.length ? formatMoney(total / groups.length) : "—"}</strong></div>
+                <div><span>Średnio w paczce</span><strong>{groups.length ? formatMoney(groupedTotal / groups.length) : "—"}</strong></div>
                 <div><span>Minimalna dopłata</span><strong>{minimumExtraSummary !== null ? `+ ${formatMoney(minimumExtraSummary)}` : "—"}</strong></div>
               </div>
               {parsed.values.length > 18 && strategy === "optimal" && <p className="notice">Dla ponad 18 pozycji użyliśmy szybkiej, bezpiecznej strategii.</p>}
               <Results groups={groups} limit={limit} />
+              {strategy === "tight" && <Remainder values={remainder} limit={limit} />}
             </>
           ) : extra !== null ? (
             <>
